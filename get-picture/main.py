@@ -5,11 +5,13 @@ from pathlib import Path
 from typing import Dict, Optional
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 
 DEFAULT_COLOR = "#6c63ff"
 UNDRAW_DIR = Path(__file__).resolve().parent.parent / "undraw"
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
 class PictureRequest(BaseModel):
@@ -107,6 +109,10 @@ def get_picture(req: PictureRequest, color: Optional[str] = Query(default=None))
         svg_text = svg_text.replace(DEFAULT_COLOR, user_color)
 
     return {"svg": svg_text}
+
+
+if STATIC_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")
 
 
 if __name__ == "__main__":
