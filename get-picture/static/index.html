@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Undraw pictures</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css">
+  <style>
+    :root {
+      --page-bg: #0f0f12;
+      --surface: #16161c;
+      --surface-elevated: #1c1c24;
+      --art-bg: #2a2a32;
+      --art-border: rgba(255, 255, 255, 0.08);
+      --scrollbar-thumb: rgba(255, 255, 255, 0.18);
+      --scrollbar-thumb-hover: rgba(255, 255, 255, 0.28);
+    }
+
+    html {
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb) transparent;
+    }
+    html::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    html::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    html::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    html::-webkit-scrollbar-thumb:hover {
+      background: var(--scrollbar-thumb-hover);
+      background-clip: padding-box;
+    }
+
+    body {
+      background: var(--page-bg);
+      min-height: 100vh;
+    }
+
+    .gallery {
+      max-height: min(72vh, 40rem);
+      overflow: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb) transparent;
+    }
+    .gallery::-webkit-scrollbar {
+      width: 8px;
+    }
+    .gallery::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .gallery::-webkit-scrollbar-thumb {
+      background: var(--scrollbar-thumb);
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    .gallery::-webkit-scrollbar-thumb:hover {
+      background: var(--scrollbar-thumb-hover);
+      background-clip: padding-box;
+    }
+
+    .gallery-card {
+      cursor: pointer;
+      user-select: none;
+      background: var(--surface-elevated);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .gallery-card.is-selected {
+      outline: 2px solid var(--bulma-link);
+      outline-offset: 2px;
+      border-radius: 10px;
+    }
+
+    .thumb-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--art-bg);
+      border: 1px solid var(--art-border);
+      border-radius: 8px;
+      min-height: 8.5rem;
+      overflow: hidden;
+    }
+    .thumb-wrap svg {
+      width: 100%;
+      height: 9rem;
+      max-height: 9rem;
+    }
+
+    .modal-art {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--art-bg);
+      border: 1px solid var(--art-border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      min-height: 12rem;
+    }
+    .modal-art svg {
+      max-width: 100%;
+      height: auto;
+      max-height: min(65vh, 520px);
+    }
+
+    #previewModal .modal-card {
+      background: var(--surface);
+      color: #e8e8ec;
+    }
+    #previewModal .modal-card-head,
+    #previewModal .modal-card-foot {
+      background: transparent;
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    #previewModal .modal-card-title {
+      color: inherit;
+    }
+
+    .page-muted {
+      color: rgba(232, 232, 236, 0.65);
+    }
+  </style>
+</head>
+<body>
+  <section class="section">
+    <div class="container">
+      <h1 class="title has-text-white">Undraw pictures</h1>
+      <p class="subtitle is-6 page-muted">Pick an illustration and a theme color. Click a card to preview.</p>
+
+      <div class="field">
+        <label class="label has-text-grey-lighter" for="search">Search</label>
+        <div class="control">
+          <input class="input" type="search" id="search" placeholder="Filter by name…" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label has-text-grey-lighter">Color</label>
+        <div class="field is-grouped">
+          <div class="control">
+            <input class="input" type="color" id="color" value="#6c63ff" title="Theme color" style="width:4rem;height:2.5rem;padding:2px;cursor:pointer;">
+          </div>
+          <div class="control is-expanded">
+            <input class="input is-family-monospace" type="text" id="colorHex" maxlength="7" placeholder="#6c63ff" aria-label="Hex color">
+          </div>
+        </div>
+        <p class="help page-muted">Replaces the default undraw purple (<code class="has-text-grey-light">#6c63ff</code>) in the SVG.</p>
+      </div>
+
+      <div class="level mb-2">
+        <div class="level-left">
+          <div class="level-item">
+            <label class="label has-text-grey-lighter mb-0">Gallery</label>
+          </div>
+        </div>
+        <div class="level-right">
+          <div class="level-item">
+            <p class="help page-muted" id="countLabel"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="box gallery p-3 mb-0" style="background:var(--surface);border-color:rgba(255,255,255,.06);">
+        <div class="columns is-multiline is-variable is-2" id="galleryGrid"></div>
+      </div>
+
+      <p class="help mt-3 page-muted" id="status"></p>
+    </div>
+  </section>
+
+  <div id="previewModal" class="modal">
+    <div class="modal-background" id="modalBackdrop"></div>
+    <div class="modal-card" style="max-width: min(920px, 96vw);">
+      <header class="modal-card-head">
+        <p class="modal-card-title" id="modalTitle">Preview</p>
+        <button type="button" class="delete" id="modalClose" aria-label="close"></button>
+      </header>
+      <section class="modal-card-body">
+        <div class="modal-art mb-0">
+          <p class="has-text-grey page-muted" id="modalPlaceholder">Loading…</p>
+          <div id="modalPreviewSvg" class="is-hidden" aria-live="polite"></div>
+        </div>
+      </section>
+      <footer class="modal-card-foot is-justify-content-flex-end">
+        <button type="button" class="button" id="modalCancel">Close</button>
+        <button type="button" class="button is-link" id="downloadBtn" disabled>Download SVG</button>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const galleryGrid = document.getElementById('galleryGrid');
+      const searchEl = document.getElementById('search');
+      const colorEl = document.getElementById('color');
+      const colorHexEl = document.getElementById('colorHex');
+      const modalPlaceholder = document.getElementById('modalPlaceholder');
+      const modalPreviewSvg = document.getElementById('modalPreviewSvg');
+      const modalTitle = document.getElementById('modalTitle');
+      const statusEl = document.getElementById('status');
+      const countLabel = document.getElementById('countLabel');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const previewModal = document.getElementById('previewModal');
+      const modalBackdrop = document.getElementById('modalBackdrop');
+      const modalClose = document.getElementById('modalClose');
+      const modalCancel = document.getElementById('modalCancel');
+
+      let names = [];
+      let selectedName = null;
+      let filter = '';
+      let lastPreviewSvgText = '';
+      let io = null;
+      let currentColorForThumbs = '#6c63ff';
+      const thumbCache = new Map();
+
+      function hexFromColorInput() {
+        return colorEl.value.toLowerCase();
+      }
+
+      function syncHexFromPicker() {
+        colorHexEl.value = hexFromColorInput();
+      }
+
+      function applyHexFromText() {
+        let s = colorHexEl.value.trim();
+        if (!s.startsWith('#')) s = '#' + s;
+        if (/^#[0-9a-fA-F]{6}$/.test(s)) {
+          colorEl.value = s.toLowerCase();
+          colorHexEl.value = s.toLowerCase();
+          return true;
+        }
+        return false;
+      }
+
+      function setStatus(msg, isError) {
+        statusEl.textContent = msg || '';
+        statusEl.classList.toggle('has-text-danger', !!isError);
+      }
+
+      function isModalOpen() {
+        return previewModal.classList.contains('is-active');
+      }
+
+      function openModal() {
+        previewModal.classList.add('is-active');
+        document.documentElement.classList.add('is-clipped');
+      }
+
+      function closeModal() {
+        previewModal.classList.remove('is-active');
+        document.documentElement.classList.remove('is-clipped');
+      }
+
+      function filteredNames() {
+        const q = filter.toLowerCase();
+        return q ? names.filter(function (n) { return n.toLowerCase().includes(q); }) : names;
+      }
+
+      function buildCard(name) {
+        const col = document.createElement('div');
+        col.className = 'column is-6-mobile is-4-tablet is-3-desktop';
+
+        const card = document.createElement('div');
+        card.className = 'card gallery-card';
+        card.tabIndex = 0;
+        card.setAttribute('role', 'button');
+        card.setAttribute('aria-label', 'Open preview: ' + name);
+        card.dataset.name = name;
+
+        const cardContent = document.createElement('div');
+        cardContent.className = 'card-content p-3';
+
+        const thumb = document.createElement('div');
+        thumb.className = 'thumb-wrap mb-2';
+        thumb.dataset.thumb = '1';
+        thumb.innerHTML = '<p class="is-size-7 page-muted">Loading…</p>';
+
+        const title = document.createElement('p');
+        title.className = 'is-size-7 has-text-weight-semibold';
+        title.textContent = name;
+
+        cardContent.appendChild(thumb);
+        cardContent.appendChild(title);
+        card.appendChild(cardContent);
+        col.appendChild(card);
+
+        function activate() {
+          selectPicture(name);
+          openModal();
+          loadPreview();
+        }
+        card.addEventListener('click', function () { activate(); });
+        card.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            activate();
+          }
+        });
+
+        return col;
+      }
+
+      function renderGrid() {
+        const filtered = filteredNames();
+        galleryGrid.innerHTML = '';
+        filtered.forEach(function (name) {
+          galleryGrid.appendChild(buildCard(name));
+        });
+
+        countLabel.textContent = filtered.length === names.length
+          ? names.length + ' pictures'
+          : filtered.length + ' shown · ' + names.length + ' total';
+
+        highlightSelected();
+        setupIntersectionObserver();
+      }
+
+      function selectPicture(name) {
+        selectedName = name;
+        highlightSelected();
+      }
+
+      function highlightSelected() {
+        Array.prototype.forEach.call(galleryGrid.querySelectorAll('.gallery-card'), function (card) {
+          card.classList.toggle('is-selected', card.dataset.name === selectedName);
+        });
+      }
+
+      async function fetchSvg(name, color) {
+        const params = new URLSearchParams();
+        params.set('color', color);
+        const res = await fetch('/get-picture/?' + params.toString(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name }),
+        });
+        const data = await res.json().catch(function () { return {}; });
+        if (!res.ok) {
+          const msg = data.detail || res.statusText || 'Request failed';
+          throw new Error(msg);
+        }
+        return data.svg || '';
+      }
+
+      async function loadPreview() {
+        if (!selectedName) return;
+        modalTitle.textContent = selectedName;
+        modalPlaceholder.classList.remove('is-hidden');
+        modalPreviewSvg.classList.add('is-hidden');
+        modalPlaceholder.textContent = 'Loading…';
+        downloadBtn.disabled = true;
+        setStatus('');
+
+        const color = hexFromColorInput();
+        try {
+          const svgText = await fetchSvg(selectedName, color);
+          modalPlaceholder.classList.add('is-hidden');
+          modalPreviewSvg.classList.remove('is-hidden');
+          modalPreviewSvg.innerHTML = svgText;
+          lastPreviewSvgText = svgText;
+          downloadBtn.disabled = !lastPreviewSvgText;
+        } catch (err) {
+          modalPlaceholder.classList.remove('is-hidden');
+          modalPreviewSvg.classList.add('is-hidden');
+          modalPreviewSvg.innerHTML = '';
+          modalPlaceholder.textContent = String(err.message || err);
+          setStatus(String(err.message || err), true);
+        }
+      }
+
+      function sanitizeFileName(name) {
+        return String(name || 'picture')
+          .trim()
+          .replace(/[<>:\"/\\\\|?*]+/g, '-')
+          .replace(/\\s+/g, ' ')
+          .slice(0, 120);
+      }
+
+      function downloadSvg() {
+        if (!lastPreviewSvgText || !selectedName) return;
+        const blob = new Blob([lastPreviewSvgText], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = sanitizeFileName(selectedName) + '.svg';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 0);
+      }
+
+      modalBackdrop.addEventListener('click', closeModal);
+      modalClose.addEventListener('click', closeModal);
+      modalCancel.addEventListener('click', closeModal);
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && isModalOpen()) {
+          closeModal();
+        }
+      });
+
+      searchEl.addEventListener('input', function () {
+        filter = searchEl.value;
+        renderGrid();
+      });
+
+      colorEl.addEventListener('input', function () {
+        syncHexFromPicker();
+        currentColorForThumbs = hexFromColorInput();
+        thumbCache.clear();
+        setupIntersectionObserver(true);
+        if (isModalOpen() && selectedName) loadPreview();
+      });
+
+      colorHexEl.addEventListener('change', function () {
+        if (applyHexFromText()) {
+          currentColorForThumbs = hexFromColorInput();
+          thumbCache.clear();
+          setupIntersectionObserver(true);
+          if (isModalOpen() && selectedName) loadPreview();
+        }
+      });
+      colorHexEl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          if (applyHexFromText()) {
+            currentColorForThumbs = hexFromColorInput();
+            thumbCache.clear();
+            setupIntersectionObserver(true);
+            if (isModalOpen() && selectedName) loadPreview();
+          }
+        }
+      });
+
+      downloadBtn.addEventListener('click', function () { downloadSvg(); });
+
+      syncHexFromPicker();
+      currentColorForThumbs = hexFromColorInput();
+
+      fetch('/get-list')
+        .then(function (r) {
+          if (!r.ok) throw new Error(r.statusText);
+          return r.json();
+        })
+        .then(function (data) {
+          names = Array.isArray(data) ? data : [];
+          names.sort(function (a, b) { return a.localeCompare(b); });
+          renderGrid();
+          setStatus('');
+        })
+        .catch(function (err) {
+          setStatus('Could not load list: ' + (err.message || err), true);
+          countLabel.textContent = '';
+        });
+
+      function setupIntersectionObserver(forceReload) {
+        if (!galleryGrid) return;
+        if (io) io.disconnect();
+        const color = currentColorForThumbs;
+
+        io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            const card = entry.target;
+            const name = card.dataset.name;
+            const thumb = card.querySelector('[data-thumb="1"]');
+            if (!thumb) return;
+
+            const cacheKey = name + '|' + color;
+            if (!forceReload && thumb.dataset.loadedKey === cacheKey) return;
+
+            if (thumbCache.has(cacheKey)) {
+              thumb.innerHTML = thumbCache.get(cacheKey);
+              thumb.dataset.loadedKey = cacheKey;
+              return;
+            }
+
+            thumb.innerHTML = '<p class="is-size-7 page-muted">Loading…</p>';
+            fetchSvg(name, color)
+              .then(function (svgText) {
+                thumbCache.set(cacheKey, svgText);
+                if (currentColorForThumbs !== color) return;
+                thumb.innerHTML = svgText;
+                thumb.dataset.loadedKey = cacheKey;
+              })
+              .catch(function () {
+                thumb.innerHTML = '<p class="is-size-7 page-muted">Preview unavailable</p>';
+              });
+          });
+        }, { root: document.querySelector('.gallery'), rootMargin: '200px 0px', threshold: 0.01 });
+
+        Array.prototype.forEach.call(galleryGrid.querySelectorAll('.gallery-card'), function (card) {
+          io.observe(card);
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
