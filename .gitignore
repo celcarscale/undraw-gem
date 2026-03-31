@@ -8,3 +8,5 @@
 /tmp/
 *.gem
 scrap.rb
+
+_pycache__/
