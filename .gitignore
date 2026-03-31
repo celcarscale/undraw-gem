@@ -9,4 +9,4 @@
 *.gem
 scrap.rb
 
-_pycache__/
+*_pycache__/
